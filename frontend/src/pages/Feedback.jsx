@@ -15,7 +15,7 @@ const Feedback = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/feedback', formData);
+      await axios.post('/api/feedback', formData);
       setSubmitted(true);
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (err) {

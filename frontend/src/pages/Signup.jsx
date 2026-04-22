@@ -19,7 +19,7 @@ const Signup = ({ setIsAuthenticated }) => {
     setLoading(true);
     
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/signup', formData);
+      const res = await axios.post('/api/auth/signup', formData);
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('userName', res.data.name);
       setIsAuthenticated(true);

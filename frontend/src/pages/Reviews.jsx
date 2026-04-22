@@ -15,7 +15,7 @@ const Reviews = () => {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:5000/api/reviews');
+      const response = await axios.get('/api/reviews');
       setReviews(response.data);
     } catch (err) {
       console.error("Error fetching reviews:", err);
@@ -41,7 +41,7 @@ const Reviews = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await axios.post('http://localhost:5000/api/reviews', formData);
+      await axios.post('/api/reviews', formData);
       setSubmitted(true);
       setFormData({ name: '', rating: 5, comment: '' });
       // Refresh the reviews list

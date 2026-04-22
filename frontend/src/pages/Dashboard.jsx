@@ -25,7 +25,7 @@ const Dashboard = () => {
   const fetchAccounts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/accounts', {
+      const res = await axios.get('/api/accounts', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAccounts(res.data);
@@ -49,7 +49,7 @@ const Dashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/accounts/create', {
+      await axios.post('/api/accounts/create', {
         accountType: newAccountType,
         initialBalance: Number(initialBalance)
       }, {
@@ -80,7 +80,7 @@ const Dashboard = () => {
         payload.accountId = selectedAccount;
       }
 
-      await axios.post(`http://localhost:5000/api/transactions/${transactionType.toLowerCase()}`, payload, {
+      await axios.post(`/api/transactions/${transactionType.toLowerCase()}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -101,7 +101,7 @@ const Dashboard = () => {
   const fetchHistory = async (accountId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:5000/api/transactions/${accountId}`, {
+      const res = await axios.get(`/api/transactions/${accountId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setHistory(res.data);
