@@ -32,7 +32,7 @@ const Dashboard = () => {
       if (res.data.length === 0) {
         setShowCreateForm(true);
       } else {
-        setSelectedAccount(res.data[0].ID);
+        setSelectedAccount(res.data[0].id);
       }
     } catch (err) {
       setError('Failed to load accounts.');
@@ -183,15 +183,15 @@ const Dashboard = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-4">Your Accounts</h2>
             {accounts.map(acc => (
               <div 
-                key={acc.ID} 
-                onClick={() => { setSelectedAccount(acc.ID); setTransactionType(null); fetchHistory(acc.ID); }}
-                className={`p-5 rounded-xl cursor-pointer transition-all border ${selectedAccount === acc.ID ? 'border-[var(--primary-color)] bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-blue-300'}`}
+                key={acc.id} 
+                onClick={() => { setSelectedAccount(acc.id); setTransactionType(null); fetchHistory(acc.id); }}
+                className={`p-5 rounded-xl cursor-pointer transition-all border ${selectedAccount === acc.id ? 'border-[var(--primary-color)] bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-blue-300'}`}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">{acc.ACCOUNT_TYPE}</span>
-                  <span className="text-xs text-gray-400">Acc: {acc.ID}</span>
+                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">{acc.account_type}</span>
+                  <span className="text-xs text-gray-400">Acc: {acc.id}</span>
                 </div>
-                <div className="text-3xl font-bold text-gray-900">${acc.BALANCE?.toFixed(2)}</div>
+                <div className="text-3xl font-bold text-gray-900">${Number(acc.balance)?.toFixed(2)}</div>
               </div>
             ))}
           </div>
@@ -297,22 +297,22 @@ const Dashboard = () => {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {history.map(tx => (
-                          <tr key={tx.ID}>
+                          <tr key={tx.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(tx.TRANSACTION_DATE).toLocaleString()}
+                              {new Date(tx.transaction_date).toLocaleString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${tx.TRANSACTION_TYPE === 'Deposit' ? 'bg-green-100 text-green-800' : 
-                                  tx.TRANSACTION_TYPE === 'Withdraw' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-                                {tx.TRANSACTION_TYPE}
+                                ${tx.transaction_type === 'Deposit' ? 'bg-green-100 text-green-800' : 
+                                  tx.transaction_type === 'Withdraw' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                                {tx.transaction_type}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-500">
-                              {tx.DESCRIPTION}
+                              {tx.description}
                             </td>
-                            <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${tx.TRANSACTION_TYPE === 'Deposit' ? 'text-green-600' : 'text-gray-900'}`}>
-                              {tx.TRANSACTION_TYPE === 'Deposit' ? '+' : '-'}${tx.AMOUNT?.toFixed(2)}
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${tx.transaction_type === 'Deposit' ? 'text-green-600' : 'text-gray-900'}`}>
+                              {tx.transaction_type === 'Deposit' ? '+' : '-'}${Number(tx.amount)?.toFixed(2)}
                             </td>
                           </tr>
                         ))}

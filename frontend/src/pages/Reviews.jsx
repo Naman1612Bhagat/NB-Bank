@@ -169,12 +169,12 @@ const Reviews = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center font-bold text-[var(--primary-color)] text-xl uppercase">
-                        {review.NAME.charAt(0)}
+                        {review.name.charAt(0)}
                       </div>
                       <div>
-                        <h4 className="font-bold text-gray-900 capitalize text-lg">{review.NAME}</h4>
+                        <h4 className="font-bold text-gray-900 capitalize text-lg">{review.name}</h4>
                         <p className="text-xs text-gray-500">
-                          {new Date(review.CREATED_AT).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                          {new Date(review.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                         </p>
                       </div>
                     </div>
@@ -182,15 +182,15 @@ const Reviews = () => {
                       {[...Array(5)].map((_, i) => (
                         <Star 
                           key={i} 
-                          fill={i < review.RATING ? "currentColor" : "none"} 
-                          color={i < review.RATING ? "currentColor" : "#D1D5DB"} 
+                          fill={i < review.rating ? "currentColor" : "none"} 
+                          color={i < review.rating ? "currentColor" : "#D1D5DB"} 
                           size={18} 
                         />
                       ))}
                     </div>
                   </div>
                   <p className="text-gray-700 leading-relaxed pl-16">
-                    "{review.COMMENT_TEXT}"
+                    "{review.comment_text}"
                   </p>
                 </div>
               ))}

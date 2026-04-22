@@ -1,32 +1,30 @@
-const oracledb = require('oracledb');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-// Enable Thick mode for Oracle 11g compatibility using local Oracle XE installation
-try {
-    oracledb.initOracleClient({ libDir: 'C:\\oraclexe\\app\\oracle\\product\\11.2.0\\server\\bin' });
-    console.log("Oracle Client initialized in Thick mode.");
-} catch (err) {
-    console.error("Failed to initialize Oracle Client Thick mode:", err);
-}
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+});
 
-// Ensure the db config handles both cloud wallet and local connections
 async function connectDB() {
     try {
-        await oracledb.createPool({
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            connectString: process.env.DB_CONNECTION_STRING
-        });
-        console.log("Connected to Oracle Database successfully");
+        const client = await pool.connect();
+        console.log("Connected to PostgreSQL Database successfully");
+        client.release();
     } catch (err) {
-        console.error("Error connecting to Oracle DB:", err);
+        console.error("Error connecting to PostgreSQL DB:", err);
         process.exit(1);
     }
 }
 
-// Function to get a connection from the pool
-async function getConnection() {
-    return await oracledb.getConnection();
+// Function to execute a query (replaces getConnection().execute)
+// Using this helper method so we don't have to rewrite every `await connection.execute(...)` to `await pool.query(...)` completely
+async function query(text, params) {
+    return await pool.query(text, params);
 }
 
-module.exports = { connectDB, getConnection, oracledb };
+// Function to get a connection client from the pool (if transactions are needed)
+async function getConnection() {
+    return await pool.connect();
+}
+
+module.exports = { connectDB, query, getConnection, pool };

@@ -134,21 +134,21 @@ const Home = () => {
                     {[...Array(5)].map((_, i) => (
                       <Star 
                         key={i} 
-                        fill={i < review.RATING ? "currentColor" : "none"} 
-                        color={i < review.RATING ? "currentColor" : "#D1D5DB"} 
+                        fill={i < review.rating ? "currentColor" : "none"} 
+                        color={i < review.rating ? "currentColor" : "#D1D5DB"} 
                         size={20} 
                       />
                     ))}
                   </div>
-                  <p className="text-gray-700 italic mb-6 line-clamp-4">"{review.COMMENT_TEXT}"</p>
+                  <p className="text-gray-700 italic mb-6 line-clamp-4">"{review.comment_text}"</p>
                   <div className="flex items-center gap-4 mt-auto">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center font-bold text-[var(--primary-color)] text-xl uppercase">
-                      {review.NAME.charAt(0)}
+                      {review.name.charAt(0)}
                     </div>
                     <div>
-                      <h4 className="font-bold text-gray-900 capitalize">{review.NAME}</h4>
+                      <h4 className="font-bold text-gray-900 capitalize">{review.name}</h4>
                       <p className="text-xs text-gray-500">
-                        {new Date(review.CREATED_AT).toLocaleDateString()}
+                        {new Date(review.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

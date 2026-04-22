@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { getConnection } = require('../config/db');
+const { getConnection, query } = require('../config/db');
 
 // Helper to check if account belongs to user
-const verifyAccountOwnership = async (connection, accountId, userId) => {
-    const result = await connection.execute(
-        `SELECT * FROM Accounts WHERE id = :accountId AND user_id = :userId`,
-        [accountId, userId],
-        { outFormat: require('oracledb').OUT_FORMAT_OBJECT }
+const verifyAccountOwnership = async (accountId, userId) => {
+    const result = await query(
+        `SELECT * FROM Accounts WHERE id = $1 AND user_id = $2`,
+        [accountId, userId]
     );
     return result.rows.length > 0;
 };
@@ -16,43 +15,41 @@ const verifyAccountOwnership = async (connection, accountId, userId) => {
 // Deposit
 router.post('/deposit', protect, async (req, res) => {
     const { accountId, amount, description } = req.body;
-    let connection;
+    let client;
 
     try {
         if (amount <= 0) return res.status(400).json({ message: "Amount must be greater than 0" });
 
-        connection = await getConnection();
-        
-        const isOwner = await verifyAccountOwnership(connection, accountId, req.user.id);
+        const isOwner = await verifyAccountOwnership(accountId, req.user.id);
         if (!isOwner) return res.status(403).json({ message: "Not authorized for this account" });
 
+        client = await getConnection();
+        await client.query('BEGIN');
+
         // Update balance
-        await connection.execute(
-            `UPDATE Accounts SET balance = balance + :amount WHERE id = :accountId`,
-            [amount, accountId],
-            { autoCommit: false }
+        await client.query(
+            `UPDATE Accounts SET balance = balance + $1 WHERE id = $2`,
+            [amount, accountId]
         );
 
         // Record transaction
-        await connection.execute(
-            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES (:accountId, 'Deposit', :amount, :description)`,
-            { accountId, amount, description: description || 'Deposit' },
-            { autoCommit: false }
+        await client.query(
+            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES ($1, 'Deposit', $2, $3)`,
+            [accountId, amount, description || 'Deposit']
         );
 
-        await connection.commit();
-
+        await client.query('COMMIT');
         res.json({ message: "Deposit successful" });
 
     } catch (err) {
-        if (connection) {
-            try { await connection.rollback(); } catch(e) { console.error(e); }
+        if (client) {
+            try { await client.query('ROLLBACK'); } catch(e) { console.error(e); }
         }
         console.error(err);
         res.status(500).json({ message: "Server error" });
     } finally {
-        if (connection) {
-            try { await connection.close(); } catch (err) { console.error(err); }
+        if (client) {
+            client.release();
         }
     }
 });
@@ -60,53 +57,51 @@ router.post('/deposit', protect, async (req, res) => {
 // Withdraw
 router.post('/withdraw', protect, async (req, res) => {
     const { accountId, amount, description } = req.body;
-    let connection;
+    let client;
 
     try {
         if (amount <= 0) return res.status(400).json({ message: "Amount must be greater than 0" });
 
-        connection = await getConnection();
-        
-        const isOwner = await verifyAccountOwnership(connection, accountId, req.user.id);
+        const isOwner = await verifyAccountOwnership(accountId, req.user.id);
         if (!isOwner) return res.status(403).json({ message: "Not authorized for this account" });
 
+        client = await getConnection();
+        await client.query('BEGIN');
+
         // Check balance
-        const accResult = await connection.execute(
-            `SELECT balance FROM Accounts WHERE id = :accountId`,
-            [accountId],
-            { outFormat: require('oracledb').OUT_FORMAT_OBJECT }
+        const accResult = await client.query(
+            `SELECT balance FROM Accounts WHERE id = $1`,
+            [accountId]
         );
-        if (accResult.rows[0].BALANCE < amount) {
+        if (Number(accResult.rows[0].balance) < amount) {
+            await client.query('ROLLBACK');
             return res.status(400).json({ message: "Insufficient funds" });
         }
 
         // Update balance
-        await connection.execute(
-            `UPDATE Accounts SET balance = balance - :amount WHERE id = :accountId`,
-            [amount, accountId],
-            { autoCommit: false }
+        await client.query(
+            `UPDATE Accounts SET balance = balance - $1 WHERE id = $2`,
+            [amount, accountId]
         );
 
         // Record transaction
-        await connection.execute(
-            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES (:accountId, 'Withdraw', :amount, :description)`,
-            { accountId, amount, description: description || 'Withdrawal' },
-            { autoCommit: false }
+        await client.query(
+            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES ($1, 'Withdraw', $2, $3)`,
+            [accountId, amount, description || 'Withdrawal']
         );
 
-        await connection.commit();
-
+        await client.query('COMMIT');
         res.json({ message: "Withdrawal successful" });
 
     } catch (err) {
-        if (connection) {
-            try { await connection.rollback(); } catch(e) { console.error(e); }
+        if (client) {
+            try { await client.query('ROLLBACK'); } catch(e) { console.error(e); }
         }
         console.error(err);
         res.status(500).json({ message: "Server error" });
     } finally {
-        if (connection) {
-            try { await connection.close(); } catch (err) { console.error(err); }
+        if (client) {
+            client.release();
         }
     }
 });
@@ -114,94 +109,89 @@ router.post('/withdraw', protect, async (req, res) => {
 // Transfer
 router.post('/transfer', protect, async (req, res) => {
     const { fromAccountId, toAccountId, amount, description } = req.body;
-    let connection;
+    let client;
 
     try {
         if (amount <= 0) return res.status(400).json({ message: "Amount must be greater than 0" });
         if (fromAccountId === toAccountId) return res.status(400).json({ message: "Cannot transfer to same account" });
 
-        connection = await getConnection();
-        
-        const isOwner = await verifyAccountOwnership(connection, fromAccountId, req.user.id);
+        const isOwner = await verifyAccountOwnership(fromAccountId, req.user.id);
         if (!isOwner) return res.status(403).json({ message: "Not authorized for source account" });
 
+        client = await getConnection();
+        await client.query('BEGIN');
+
         // Check target account exists
-        const toAccResult = await connection.execute(
-            `SELECT id FROM Accounts WHERE id = :toAccountId`,
+        const toAccResult = await client.query(
+            `SELECT id FROM Accounts WHERE id = $1`,
             [toAccountId]
         );
-        if (toAccResult.rows.length === 0) return res.status(404).json({ message: "Target account not found" });
+        if (toAccResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: "Target account not found" });
+        }
 
         // Check balance
-        const accResult = await connection.execute(
-            `SELECT balance FROM Accounts WHERE id = :fromAccountId`,
-            [fromAccountId],
-            { outFormat: require('oracledb').OUT_FORMAT_OBJECT }
+        const accResult = await client.query(
+            `SELECT balance FROM Accounts WHERE id = $1`,
+            [fromAccountId]
         );
-        if (accResult.rows[0].BALANCE < amount) {
+        if (Number(accResult.rows[0].balance) < amount) {
+            await client.query('ROLLBACK');
             return res.status(400).json({ message: "Insufficient funds" });
         }
 
         // Deduct from source
-        await connection.execute(
-            `UPDATE Accounts SET balance = balance - :amount WHERE id = :fromAccountId`,
-            [amount, fromAccountId],
-            { autoCommit: false }
+        await client.query(
+            `UPDATE Accounts SET balance = balance - $1 WHERE id = $2`,
+            [amount, fromAccountId]
         );
 
         // Add to target
-        await connection.execute(
-            `UPDATE Accounts SET balance = balance + :amount WHERE id = :toAccountId`,
-            [amount, toAccountId],
-            { autoCommit: false }
+        await client.query(
+            `UPDATE Accounts SET balance = balance + $1 WHERE id = $2`,
+            [amount, toAccountId]
         );
 
         // Record source transaction
-        await connection.execute(
-            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES (:fromAccountId, 'Transfer', :amount, :description)`,
-            { fromAccountId, amount, description: `Transfer to Acc ${toAccountId}: ` + (description || '') },
-            { autoCommit: false }
+        await client.query(
+            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES ($1, 'Transfer', $2, $3)`,
+            [fromAccountId, amount, `Transfer to Acc ${toAccountId}: ` + (description || '')]
         );
 
-        // Record target transaction (optional, depending on requirements, usually 'Deposit' or 'Transfer In')
-        await connection.execute(
-            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES (:toAccountId, 'Deposit', :amount, :description)`,
-            { toAccountId, amount, description: `Transfer from Acc ${fromAccountId}: ` + (description || '') },
-            { autoCommit: false }
+        // Record target transaction
+        await client.query(
+            `INSERT INTO Transactions (account_id, transaction_type, amount, description) VALUES ($1, 'Deposit', $2, $3)`,
+            [toAccountId, amount, `Transfer from Acc ${fromAccountId}: ` + (description || '')]
         );
 
-        await connection.commit();
-
+        await client.query('COMMIT');
         res.json({ message: "Transfer successful" });
 
     } catch (err) {
-        if (connection) {
-            try { await connection.rollback(); } catch(e) { console.error(e); }
+        if (client) {
+            try { await client.query('ROLLBACK'); } catch(e) { console.error(e); }
         }
         console.error(err);
         res.status(500).json({ message: "Server error" });
     } finally {
-        if (connection) {
-            try { await connection.close(); } catch (err) { console.error(err); }
+        if (client) {
+            client.release();
         }
     }
 });
 
 // Transaction History
 router.get('/:accountId', protect, async (req, res) => {
-    let connection;
-
     try {
-        connection = await getConnection();
         const accountId = req.params.accountId;
 
-        const isOwner = await verifyAccountOwnership(connection, accountId, req.user.id);
+        const isOwner = await verifyAccountOwnership(accountId, req.user.id);
         if (!isOwner) return res.status(403).json({ message: "Not authorized for this account" });
 
-        const result = await connection.execute(
-            `SELECT * FROM Transactions WHERE account_id = :accountId ORDER BY transaction_date DESC`,
-            [accountId],
-            { outFormat: require('oracledb').OUT_FORMAT_OBJECT }
+        const result = await query(
+            `SELECT * FROM Transactions WHERE account_id = $1 ORDER BY transaction_date DESC`,
+            [accountId]
         );
 
         res.json(result.rows);
@@ -209,10 +199,6 @@ router.get('/:accountId', protect, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Server error" });
-    } finally {
-        if (connection) {
-            try { await connection.close(); } catch (err) { console.error(err); }
-        }
     }
 });
 
