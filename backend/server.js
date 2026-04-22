@@ -15,12 +15,14 @@ const accountRoutes = require('./routes/accountRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const newsRoutes = require('./routes/newsRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/news', newsRoutes);
 
 // Database connection
 connectDB().then(() => {

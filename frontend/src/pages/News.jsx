@@ -11,9 +11,8 @@ const News = () => {
     setLoading(true);
     setError('');
     try {
-      // NewsAPI endpoint for banking and finance news
-      const apiKey = 'b3157a6052c24ef2aab80222a6de5464';
-      const response = await axios.get(`https://newsapi.org/v2/everything?q=banking+OR+finance+OR+economy&language=en&sortBy=publishedAt&pageSize=12&apiKey=${apiKey}`);
+      // Fetch from our own backend proxy to bypass NewsAPI's browser blocks on deployed domains
+      const response = await axios.get('/api/news');
       
       // Filter out removed or empty articles
       const validArticles = response.data.articles.filter(article => article.title && article.title !== '[Removed]');
